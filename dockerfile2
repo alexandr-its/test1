@@ -1,0 +1,6 @@
+FROM nginx:latest
+COPY index.html /usr/share/nginx/html
+ENV MY_NAME=test1
+COPY entrypoint.sh entrypoint.sh
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]
