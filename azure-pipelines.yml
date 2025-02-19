@@ -46,7 +46,7 @@ stages:
     pool:
       name: 'test' 
       demands:
-        - agent.name -equals 'aws-rhel-agent'
+        - Agent.Name -equals 'aws-rhel-agent'
     steps:
     - script: |
         echo "$(cat /etc/os-release)"
