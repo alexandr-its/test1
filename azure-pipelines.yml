@@ -1,4 +1,5 @@
 trigger:
+
   branches:
     include:
       - main
@@ -11,48 +12,32 @@ stages:
       vmImage: ubuntu-latest
 
     steps:
-    - task: AWSCLI@1
+    - task: AWSShellScript@1
       displayName: "Run EC2 Instance"
       inputs:
         awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
         regionName: 'eu-west-1'
-        awsCommand: "ec2"
-        awsSubCommand: "run-instances"
-        awsArguments: >
-          --launch-template LaunchTemplateName=test-azure-agent-rhel
-          --count 1
-          --query 'Instances[0].InstanceId'
-          --output text
-      name: StartInstance
-      continueOnError: true  # Чтобы не остановить выполнение на случае ошибки
-
-    - script: |
-        # Получаем AWS credentials из Azure DevOps и экспортируем их для использования в aws-cli
-        export AWS_ACCESS_KEY_ID=$(aws --profile $(AWS_CREDS) configure get aws_access_key_id)
-        export AWS_SECRET_ACCESS_KEY=$(aws --profile $(AWS_CREDS) configure get aws_secret_access_key)
-        export AWS_DEFAULT_REGION=eu-west-1
-        
-        # Получаем Instance ID из вывода AWSCLI
-        INSTANCE_ID=$(aws ec2 run-instances \
-          --launch-template LaunchTemplateName=test-azure-agent-rhel \
-          --count 1 \
-          --query 'Instances[0].InstanceId' \
-          --output text)
+        scriptType: 'inline'
+        inlineScript: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --launch-template LaunchTemplateName=test-azure-agent-rhel \
+            --count 1 \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+          echo "Instance started with ID: $INSTANCE_ID"
           
-        echo "Instance started with ID: $INSTANCE_ID"
-        
-        # Устанавливаем переменную для использования в следующих шагах
-        echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
-      displayName: "Capture Instance ID"
-
-    - task: AWSCLI@1
+          # Устанавливаем переменную для использования в следующих шагах
+          echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
+      
+    - task: AWSShellScript@1
       displayName: "Wait for EC2 instance to be running"
       inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        awsCredentials: '$(AWS_CREDS)'
         regionName: 'eu-west-1'
-        awsCommand: "ec2"
-        awsSubCommand: "wait"
-        awsArguments: "instance-running --instance-ids $(INSTANCE_ID)"
+        scriptType: 'inline'
+        inlineScript: |
+          aws ec2 wait instance-running --instance-ids $(INSTANCE_ID)
+
 
 - stage: Build
   dependsOn: StartEC2
