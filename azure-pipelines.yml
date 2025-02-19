@@ -12,6 +12,7 @@ stages:
 
     steps:
     - script: |
+        export AWS_PROFILE=$(AWS_CREDS)
         export AWS_DEFAULT_REGION=eu-west-1
         INSTANCE_ID=$(aws ec2 run-instances \
           --launch-template LaunchTemplateName=test-azure-agent-rhel \
