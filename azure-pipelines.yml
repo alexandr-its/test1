@@ -1,9 +1,9 @@
 trigger:
   branches:
     include:
-      - main  # Триггер на main
+      - main
 
-stages: 
+stages:
 - stage: StartEC2
   jobs:
   - job: StartInstance
@@ -11,28 +11,49 @@ stages:
       vmImage: ubuntu-latest
 
     steps:
+    - task: AWSCLI@1
+      displayName: "Run EC2 Instance"
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        regionName: 'eu-west-1'
+        awsCommand: "ec2"
+        awsSubCommand: "run-instances"
+        awsArguments: >
+          --launch-template LaunchTemplateName=test-azure-agent-rhel
+          --count 1
+          --query 'Instances[0].InstanceId'
+          --output text
+      name: StartInstance
+      continueOnError: true  # Чтобы не остановить выполнение на случае ошибки
+
     - script: |
-        export AWS_PROFILE=$(AWS_CREDS)
+        # Получаем AWS credentials из Azure DevOps и экспортируем их для использования в aws-cli
+        export AWS_ACCESS_KEY_ID=$(aws --profile $(AWS_CREDS) configure get aws_access_key_id)
+        export AWS_SECRET_ACCESS_KEY=$(aws --profile $(AWS_CREDS) configure get aws_secret_access_key)
         export AWS_DEFAULT_REGION=eu-west-1
+        
+        # Получаем Instance ID из вывода AWSCLI
         INSTANCE_ID=$(aws ec2 run-instances \
           --launch-template LaunchTemplateName=test-azure-agent-rhel \
           --count 1 \
           --query 'Instances[0].InstanceId' \
           --output text)
-        
+          
         echo "Instance started with ID: $INSTANCE_ID"
+        
+        # Устанавливаем переменную для использования в следующих шагах
         echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
-      displayName: "Run RHEL agent and capture Instance ID"
+      displayName: "Capture Instance ID"
 
     - task: AWSCLI@1
-      displayName: "wait RHEL agent"
+      displayName: "Wait for EC2 instance to be running"
       inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
         regionName: 'eu-west-1'
         awsCommand: "ec2"
-        awsSubCommand: "wait instance-running"
-        awsArguments: "--instance-ids $(INSTANCE_ID)"
-      
+        awsSubCommand: "wait"
+        awsArguments: "instance-running --instance-ids $(INSTANCE_ID)"
+
 - stage: Build
   dependsOn: StartEC2
   jobs:
@@ -40,7 +61,7 @@ stages:
     pool:
       name: 'test' 
       demands:
-       - agent.name -equals 'aws-rhel-agent' # Пул, в котором зарегистрирован агент на EC2
+        - agent.name -equals 'aws-rhel-agent'
     steps:
     - script: |
         echo "$(cat /etc/os-release)"
@@ -48,7 +69,7 @@ stages:
 
 - stage: StopEC2
   dependsOn: Build
-  condition: always()  # Гарантируем, что EC2 выключится, даже если билд упадёт
+  condition: always()
   jobs:
   - job: StopInstance
     pool: 
@@ -56,7 +77,7 @@ stages:
     steps:
     - task: AWSCLI@1
       inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
         regionName: 'eu-west-1'
         awsCommand: "ec2"
         awsSubCommand: "terminate-instances"
