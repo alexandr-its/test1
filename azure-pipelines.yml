@@ -15,18 +15,13 @@ stages:
       inputs:
         awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
         regionName: 'eu-west-1'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          INSTANCE_ID="i-01353434155cf7d04"
-          
-          echo "Запуск EC2-инстанса $INSTANCE_ID..."
-          aws ec2 start-instances --instance-ids $INSTANCE_ID
-          
-          echo "Ожидание запуска..."
-          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
-          
-          echo "EC2 $INSTANCE_ID успешно запущен!"
+        awsCommand: 'ec2 start-instances --instance-ids i-01353434155cf7d04'
+
+    - task: AWSCLI@1
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+        regionName: 'eu-west-1'
+        awsCommand: 'ec2 wait instance-running --instance-ids i-01353434155cf7d04'
 
 - stage: Build
   dependsOn: StartEC2
@@ -51,15 +46,4 @@ stages:
       inputs:
         awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
         regionName: 'eu-west-1'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          INSTANCE_ID="i-01353434155cf7d04"
-
-          echo "Выключаем EC2-инстанс $INSTANCE_ID..."
-          aws ec2 stop-instances --instance-ids $INSTANCE_ID
-
-          echo "Ожидание завершения..."
-          aws ec2 wait instance-stopped --instance-ids $INSTANCE_ID
-
-          echo "EC2 $INSTANCE_ID успешно выключен!"
+        awsCommand: 'ec2 stop-instances --instance-ids i-01353434155cf7d04'
