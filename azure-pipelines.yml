@@ -1,0 +1,64 @@
+
+trigger:
+  branches:
+    include:
+      - main  # Триггер на main
+
+stages: 
+- stage: StartEC2
+  jobs:
+  - job: StartInstance
+    pool: 
+      vmImage: ubuntu-latest
+    steps:
+    - task: AWSCLI@1
+      inputs:
+        awsCredentials: '$(AWS_CRED)'  # Подключение к AWS в Azure DevOps
+        regionName: 'eu-west-1'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          INSTANCE_ID="i-01353434155cf7d04"
+          
+          echo "Запуск EC2-инстанса $INSTANCE_ID..."
+          aws ec2 start-instances --instance-ids $INSTANCE_ID
+          
+          echo "Ожидание запуска..."
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          
+          echo "EC2 $INSTANCE_ID успешно запущен!"
+
+- stage: Build
+  dependsOn: StartEC2
+  jobs:
+  - job: BuildOnSelfHosted
+    pool:
+      name: 'Self-Hosted-Pool'  # Пул, в котором зарегистрирован агент на EC2
+    steps:
+    - script: |
+        echo "$(cat /etc/os-release)"
+      displayName: "Run Build Task"
+
+- stage: StopEC2
+  dependsOn: Build
+  condition: always()  # Гарантируем, что EC2 выключится, даже если билд упадёт
+  jobs:
+  - job: StopInstance
+    pool: server
+    steps:
+    - task: AWSCLI@1
+      inputs:
+        awsCredentials: '$(AWS_CRED)'  # Подключение к AWS в Azure DevOps
+        regionName: 'eu-west-1'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          INSTANCE_ID="i-01353434155cf7d04"
+
+          echo "Выключаем EC2-инстанс $INSTANCE_ID..."
+          aws ec2 stop-instances --instance-ids $INSTANCE_ID
+
+          echo "Ожидание завершения..."
+          aws ec2 wait instance-stopped --instance-ids $INSTANCE_ID
+
+          echo "EC2 $INSTANCE_ID успешно выключен!"
