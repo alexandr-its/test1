@@ -18,7 +18,7 @@ stages:
         regionName: 'eu-west-1'
         awsCommand: "ec2"
         awsSubCommand: "run-instances"
-        awsArguments: |
+        awsArguments: >
           --launch-template LaunchTemplateName=test-azure-agent-rhel
           --count 1
           --query "Instances[0].InstanceId"
