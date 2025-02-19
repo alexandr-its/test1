@@ -11,22 +11,16 @@ stages:
       vmImage: ubuntu-latest
 
     steps:
-    - task: AWSCLI@1
-      displayName: "Run RHEL agent"
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
-        regionName: 'eu-west-1'
-        awsCommand: "ec2"
-        awsSubCommand: "run-instances"
-        awsArguments: >
-          --launch-template LaunchTemplateName=test-azure-agent-rhel
-          --count 1
-          --query "Instances[0].InstanceId"
-          --output text
-          
     - script: |
-        echo "##vso[task.setvariable variable=INSTANCE_ID]$(AWSCLI)"
-      displayName: "Save Instance ID"
+        INSTANCE_ID=$(aws ec2 run-instances \
+          --launch-template LaunchTemplateName=test-azure-agent-rhel \
+          --count 1 \
+          --query 'Instances[0].InstanceId' \
+          --output text)
+        
+        echo "Instance started with ID: $INSTANCE_ID"
+        echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
+      displayName: "Run RHEL agent and capture Instance ID"
 
     - task: AWSCLI@1
       displayName: "wait RHEL agent"
