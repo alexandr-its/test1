@@ -5,31 +5,31 @@ trigger:
       - main  # Триггер на main
 
 stages: 
-- stage: StartEC2
-  jobs:
-  - job: StartInstance
-    pool: 
-      vmImage: ubuntu-latest
+# - stage: StartEC2
+#   jobs:
+#   - job: StartInstance
+#     pool: 
+#       vmImage: ubuntu-latest
 
-    steps:
-    - task: AWSCLI@1
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
-        regionName: 'eu-west-1'
-        awsCommand: 'ec2'
-        awsSubCommand: 'start-instances'
-        awsArguments: '--instance-ids i-01353434155cf7d04'
+#     steps:
+#     - task: AWSCLI@1
+#       inputs:
+#         awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+#         regionName: 'eu-west-1'
+#         awsCommand: 'ec2'
+#         awsSubCommand: 'start-instances'
+#         awsArguments: '--instance-ids i-01353434155cf7d04'
         
-    - task: AWSCLI@1
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
-        regionName: 'eu-west-1'
-        awsCommand: 'ec2'
-        awsSubCommand: 'wait'
-        awsArguments: 'instance-running --instance-ids i-01353434155cf7d04'
+#     - task: AWSCLI@1
+#       inputs:
+#         awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+#         regionName: 'eu-west-1'
+#         awsCommand: 'ec2'
+#         awsSubCommand: 'wait'
+#         awsArguments: 'instance-running --instance-ids i-01353434155cf7d04'
         
 - stage: Build
-  dependsOn: StartEC2
+  # dependsOn: StartEC2
   jobs:
   - job: BuildOnSelfHosted
     pool:
@@ -39,17 +39,17 @@ stages:
         echo "$(cat /etc/os-release)"
       displayName: "Run Build Task"
 
-- stage: StopEC2
-  dependsOn: Build
-  condition: always()  # Гарантируем, что EC2 выключится, даже если билд упадёт
-  jobs:
-  - job: StopInstance
-    pool: 
-      vmImage: ubuntu-latest
-    steps:
-    - task: AWSCLI@1
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
-        regionName: 'eu-west-1'
-        awsSubCommand: 'stop-instances'
-        awsArguments: '--instance-ids i-01353434155cf7d04'
+# - stage: StopEC2
+#   dependsOn: Build
+#   condition: always()  # Гарантируем, что EC2 выключится, даже если билд упадёт
+#   jobs:
+#   - job: StopInstance
+#     pool: 
+#       vmImage: ubuntu-latest
+#     steps:
+#     - task: AWSCLI@1
+#       inputs:
+#         awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
+#         regionName: 'eu-west-1'
+#         awsSubCommand: 'stop-instances'
+#         awsArguments: '--instance-ids i-01353434155cf7d04'
