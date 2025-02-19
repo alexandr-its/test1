@@ -21,7 +21,7 @@ stages:
         awsArguments: |
           --launch-template LaunchTemplateName=test-azure-agent-rhel
           --count 1
-          --query 'Instances[0].InstanceId'
+          --query "Instances[0].InstanceId"
           --output text
           
     - script: |
