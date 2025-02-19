@@ -13,7 +13,7 @@ stages:
     steps:
     - task: AWSCLI@1
       inputs:
-        awsCredentials: '$(AWS_CRED)'  # Подключение к AWS в Azure DevOps
+        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
         regionName: 'eu-west-1'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
@@ -33,7 +33,7 @@ stages:
   jobs:
   - job: BuildOnSelfHosted
     pool:
-      name: 'Self-Hosted-Pool'  # Пул, в котором зарегистрирован агент на EC2
+      name: 'test'  # Пул, в котором зарегистрирован агент на EC2
     steps:
     - script: |
         echo "$(cat /etc/os-release)"
@@ -44,11 +44,12 @@ stages:
   condition: always()  # Гарантируем, что EC2 выключится, даже если билд упадёт
   jobs:
   - job: StopInstance
-    pool: server
+    pool: 
+      vmImage: ubuntu-latest
     steps:
     - task: AWSCLI@1
       inputs:
-        awsCredentials: '$(AWS_CRED)'  # Подключение к AWS в Azure DevOps
+        awsCredentials: '$(AWS_CREDS)'  # Подключение к AWS в Azure DevOps
         regionName: 'eu-west-1'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
