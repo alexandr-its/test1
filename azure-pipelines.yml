@@ -12,23 +12,24 @@ stages:
       vmImage: ubuntu-latest
 
     steps:
-    # - task: AWSShellScript@1
-    #   displayName: "Run EC2 Instance"
-    #   inputs:
-    #     awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
-    #     regionName: 'eu-west-1'
-    #     scriptType: 'inline'
-    #     inlineScript: |
-    #       INSTANCE_ID=$(aws ec2 run-instances \
-    #         --launch-template LaunchTemplateName=test-azure-agent-rhel \
-    #         --count 1 \
-    #         --query 'Instances[0].InstanceId' \
-    #         --output text)
-    #       echo "Instance started with ID: $INSTANCE_ID"
+    - task: AWSShellScript@1
+      displayName: "Run EC2 Instance"
+      name: run_instance
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        regionName: 'eu-west-1'
+        scriptType: 'inline'
+        inlineScript: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --launch-template LaunchTemplateName=test-azure-agent-rhel \
+            --count 1 \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+          echo "Instance started with ID: $INSTANCE_ID"
           
-    #       # Устанавливаем переменную для использования в следующих шагах
-    #       echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
-      
+          # Устанавливаем переменную для использования в следующих шагах
+          echo "##vso[task.setvariable variable=INSTANCE_ID;isOutput=true]$INSTANCE_ID"
+
     - script: |
         #!/bin/bash
 
@@ -82,6 +83,8 @@ stages:
   condition: always()
   jobs:
   - job: StopInstance
+    variables:
+      myStageAVar: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
     pool: 
       vmImage: ubuntu-latest
     steps:
