@@ -34,7 +34,7 @@ stages:
 
         # Задайте переменные
         ORG_NAME="ISSPDEVOPS"
-        POOL_ID="test"
+        POOL_ID="19"
         AGENT_NAME="aws-rhel-agent"
         PAT="$(TOKEN)"
 
