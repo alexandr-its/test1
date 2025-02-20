@@ -69,6 +69,8 @@ stages:
   dependsOn: StartEC2
   jobs:
   - job: BuildOnSelfHosted
+    variables:
+      GIT_SUBMODULE_STRATEGY: recursive  
     pool: 
       name: test
       demands:
