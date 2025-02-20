@@ -1,0 +1,119 @@
+trigger:
+
+  branches:
+    include:
+      - main
+
+stages:
+- stage: StartEC2
+  jobs:
+  - job: StartInstance
+    pool: 
+      vmImage: ubuntu-latest
+
+    steps:
+    - task: AWSShellScript@1
+      displayName: "Run EC2 Instance"
+      name: run_instance
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        regionName: 'eu-west-1'
+        scriptType: 'inline'
+        inlineScript: |
+          INSTANCE_ID=$(aws ec2 run-instances \
+            --launch-template LaunchTemplateName=test-azure-agent-rhel \
+            --count 1 \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+          echo "Instance started with ID: $INSTANCE_ID"
+          
+          # Устанавливаем переменную для использования в следующих шагах
+          echo "##vso[task.setvariable variable=instance;isOutput=true]$INSTANCE_ID"
+
+    - script: |
+        #!/bin/bash
+
+        # Задайте переменные
+        ORG_NAME="ISSPDEVOPS"
+        POOL_ID="19"
+        AGENT_NAME="aws-rhel-agent"
+        PAT="$(TOKEN)"
+
+        # Проверка наличия агента в пуле
+        check_agent() {
+        response=$(curl -s -u ":$PAT" \
+            "https://dev.azure.com/$ORG_NAME/_apis/distributedtask/pools/$POOL_ID/agents?api-version=6.0" \
+            | jq '.value[] | select(.name=="'"$AGENT_NAME"'") | .status')
+
+        if [ "$response" == '"online"' ]; then
+            echo "Agent $AGENT_NAME is online and ready."
+            return 0
+        else
+            echo "Agent $AGENT_NAME is not ready yet. Retrying..."
+            return 1
+        fi
+        }
+
+        # Ожидание агента
+        while ! check_agent; do
+        sleep 30 # Ждем 30 секунд перед повторной попыткой
+        done
+
+        echo "Agent $AGENT_NAME is now available."
+      displayName: 'Wait for agent to become online'
+      env:
+        TOKEN: $(TOKEN)
+
+
+- stage: Build
+  dependsOn: StartEC2
+  jobs:
+  - job: BuildOnSelfHosted
+    variables:
+      GIT_SUBMODULE_STRATEGY: recursive  
+    pool: 
+      name: test
+      demands:
+        - Agent.Name -equals aws-rhel-agent
+    steps:
+      - script: |
+          yum install -y python3 python3-virtualenv python3-pip make gcc
+          python3 -m venv venv && source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install -U -r requirements.txt
+          chmod +x ./build.sh
+          ./build.sh
+        displayName: "Build in Rocky Linux 9 Container"
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: 'build/elf'
+          artifact: 'ELF_RHEL9'    
+    # - script: |
+    #     echo "$(cat /etc/os-release)"
+    #   displayName: "Run Build Task"
+
+- stage: StopEC2
+  dependsOn:
+   - StartEC2
+   - Build
+  condition: always()
+  jobs:
+  - job: StopInstance
+    variables:
+      instance_id: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.instance']]
+    pool: 
+      vmImage: ubuntu-latest
+    steps:
+
+    - script: |
+        echo "Terminating EC2 instance: $(instance_id)"
+      displayName: "Debug: Check instance_id"
+
+    - task: AWSCLI@1
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        regionName: 'eu-west-1'
+        awsCommand: "ec2"
+        awsSubCommand: "terminate-instances"
+        awsArguments: "--instance-ids $(instance_id)"
