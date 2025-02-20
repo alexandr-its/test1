@@ -74,9 +74,22 @@ stages:
       demands:
         - Agent.Name -equals aws-rhel-agent
     steps:
-    - script: |
-        echo "$(cat /etc/os-release)"
-      displayName: "Run Build Task"
+      - script: |
+          yum install -y python3 python3-virtualenv python3-pip make gcc
+          python3 -m venv venv && source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install -U -r requirements.txt
+          chmod +x ./build.sh
+          ./build.sh
+        displayName: "Build in Rocky Linux 9 Container"
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: 'build/elf'
+          artifact: 'ELF_RHEL9'    
+    # - script: |
+    #     echo "$(cat /etc/os-release)"
+    #   displayName: "Run Build Task"
 
 - stage: StopEC2
   dependsOn:
