@@ -33,10 +33,10 @@ stages:
         #!/bin/bash
 
         # Задайте переменные
-        ORG_NAME="<your_org_name>"
-        POOL_ID="<your_pool_id>"
-        AGENT_NAME="<your_agent_name>"
-        PAT="<your_personal_access_token>"
+        ORG_NAME="ISSPDEVOPS"
+        POOL_ID="test"
+        AGENT_NAME="aws-rhel-agent"
+        PAT="$(TOKEN)"
 
         # Проверка наличия агента в пуле
         check_agent() {
@@ -60,6 +60,8 @@ stages:
 
         echo "Agent $AGENT_NAME is now available."
       displayName: 'Wait for agent to become online'
+      env:
+        TOKEN: $(TOKEN)
 
 
 - stage: Build
