@@ -29,14 +29,37 @@ stages:
           # Устанавливаем переменную для использования в следующих шагах
           echo "##vso[task.setvariable variable=INSTANCE_ID]$INSTANCE_ID"
       
-    - task: AWSShellScript@1
-      displayName: "Wait for EC2 instance to be running"
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'
-        regionName: 'eu-west-1'
-        scriptType: 'inline'
-        inlineScript: |
-          aws ec2 wait instance-running --instance-ids $(INSTANCE_ID)
+    - script: |
+        #!/bin/bash
+
+        # Задайте переменные
+        ORG_NAME="<your_org_name>"
+        POOL_ID="<your_pool_id>"
+        AGENT_NAME="<your_agent_name>"
+        PAT="<your_personal_access_token>"
+
+        # Проверка наличия агента в пуле
+        check_agent() {
+        response=$(curl -s -u ":$PAT" \
+            "https://dev.azure.com/$ORG_NAME/_apis/distributedtask/pools/$POOL_ID/agents?api-version=6.0" \
+            | jq '.value[] | select(.name=="'"$AGENT_NAME"'") | .status')
+
+        if [ "$response" == '"online"' ]; then
+            echo "Agent $AGENT_NAME is online and ready."
+            return 0
+        else
+            echo "Agent $AGENT_NAME is not ready yet. Retrying..."
+            return 1
+        fi
+        }
+
+        # Ожидание агента
+        while ! check_agent; do
+        sleep 30 # Ждем 30 секунд перед повторной попыткой
+        done
+
+        echo "Agent $AGENT_NAME is now available."
+      displayName: 'Wait for agent to become online'
 
 
 - stage: Build
