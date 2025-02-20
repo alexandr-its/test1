@@ -84,7 +84,7 @@ stages:
   jobs:
   - job: StopInstance
     variables:
-      myStageAVar: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
+      INSTANCE_ID: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
     pool: 
       vmImage: ubuntu-latest
     steps:
