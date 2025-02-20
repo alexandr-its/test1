@@ -68,10 +68,10 @@ stages:
   dependsOn: StartEC2
   jobs:
   - job: BuildOnSelfHosted
-    pool:
-      name: 'test' 
+    pool: 
+      name: test
       demands:
-        - Agent.Name -equals 'aws-rhel-agent'
+        - Agent.Name -equals aws-rhel-agent
     steps:
     - script: |
         echo "$(cat /etc/os-release)"
