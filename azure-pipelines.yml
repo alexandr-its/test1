@@ -79,7 +79,9 @@ stages:
       displayName: "Run Build Task"
 
 - stage: StopEC2
-  dependsOn: Build
+  dependsOn:
+   - StartEC2
+   - Build
   condition: always()
   jobs:
   - job: StopInstance
