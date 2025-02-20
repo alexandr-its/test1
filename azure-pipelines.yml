@@ -28,7 +28,7 @@ stages:
           echo "Instance started with ID: $INSTANCE_ID"
           
           # Устанавливаем переменную для использования в следующих шагах
-          echo "##vso[task.setvariable variable=INSTANCE_ID;isOutput=true]$INSTANCE_ID"
+          echo "##vso[task.setvariable variable=instance;isOutput=true]$INSTANCE_ID"
 
     - script: |
         #!/bin/bash
@@ -84,14 +84,19 @@ stages:
   jobs:
   - job: StopInstance
     variables:
-      instance: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
+      instance_id: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.instance']]
     pool: 
       vmImage: ubuntu-latest
     steps:
-    - task: AWSCLI@1
-      inputs:
-        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
-        regionName: 'eu-west-1'
-        awsCommand: "ec2"
-        awsSubCommand: "terminate-instances"
-        awsArguments: "--instance-ids $(instance)"
+
+    - script: |
+        echo "Terminating EC2 instance: $(instance_id)"
+      displayName: "Debug: Check instance_id"
+
+    # - task: AWSCLI@1
+    #   inputs:
+    #     awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+    #     regionName: 'eu-west-1'
+    #     awsCommand: "ec2"
+    #     awsSubCommand: "terminate-instances"
+    #     awsArguments: "--instance-ids $(instance_id)"
