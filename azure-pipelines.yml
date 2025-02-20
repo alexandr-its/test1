@@ -95,10 +95,10 @@ stages:
         echo "Terminating EC2 instance: $(instance_id)"
       displayName: "Debug: Check instance_id"
 
-    # - task: AWSCLI@1
-    #   inputs:
-    #     awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
-    #     regionName: 'eu-west-1'
-    #     awsCommand: "ec2"
-    #     awsSubCommand: "terminate-instances"
-    #     awsArguments: "--instance-ids $(instance_id)"
+    - task: AWSCLI@1
+      inputs:
+        awsCredentials: '$(AWS_CREDS)'  # Используем Service Connection AWS
+        regionName: 'eu-west-1'
+        awsCommand: "ec2"
+        awsSubCommand: "terminate-instances"
+        awsArguments: "--instance-ids $(instance_id)"
