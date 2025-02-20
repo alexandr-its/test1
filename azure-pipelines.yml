@@ -84,7 +84,7 @@ stages:
   jobs:
   - job: StopInstance
     variables:
-      INSTANCE_ID: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
+      instance: $[stageDependencies.StartEC2.StartInstance.outputs['run_instance.INSTANCE_ID']]
     pool: 
       vmImage: ubuntu-latest
     steps:
@@ -94,4 +94,4 @@ stages:
         regionName: 'eu-west-1'
         awsCommand: "ec2"
         awsSubCommand: "terminate-instances"
-        awsArguments: "--instance-ids $(INSTANCE_ID)"
+        awsArguments: "--instance-ids $(instance)"
